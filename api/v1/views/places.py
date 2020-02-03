@@ -92,12 +92,11 @@ def places_search():
         cities_ids.update(c.id for c in cities if c.state_id in states_ids)
         places = [p for p in places if p.city_id in cities_ids]
     if 'amenities' in params:
-        amenities = [storage.get('Amenity', id) for id in params['amenities']]
-        places = [p for p in places if all(a in p.amenities for a in amenities)]
-    for i, p in enumerate(places):
-        places[i] = p.to_dict()
-        try:
+        amenit = [storage.get('Amenity', id) for id in params['amenities']]
+        places = [p for p in places if all(a in p.amenities for a in amenit)]
+        for i, p in enumerate(places):
+            places[i] = p.to_dict()
             del places[i]['amenities']
-        except KeyError:
-            pass
+    else:
+        places = [p.to_dict() for p in places]
     return jsonify(places)
