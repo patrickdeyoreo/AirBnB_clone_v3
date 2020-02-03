@@ -81,24 +81,23 @@ def put_place(place_id):
 @app_views.route("/places_search", methods=['POST'])
 def places_search():
     """Search for a place by state, city, and amenity"""
-    r = request.get_json()
-    if r is None:
+    params = request.get_json()
+    if params is None:
         abort(make_response(jsonify("Not a JSON"), 400))
-    if 'states' in r:
-        states_ids = set(r.get('states'))
-        cities_ids = set(r.get('cities', []))
-        cities_ids.update(c.id for c in filter(
-            lambda c: c.state_id in states_ids, storage.all('City').values()
-        ))
-    else:
-        cities_ids = set(
-            r.get('cities', [c.id for c in storage.all('City').values()])
-        )
-    amenities = [storage.get('Amenity', id) for id in r.get('amenities', [])]
-    places = filter(
-        lambda p: p.city_id in cities_ids and all(map(
-            lambda a: a in set(p.amenities), amenities
-        )),
-        storage.all('Place').values()
-    )
-    return jsonify([p.to_dict() for p in places])
+    cities = storage.all('City').values()
+    places = storage.all('Place').values()
+    if 'cities' in params or 'states' in params:
+        states_ids = set(params.get('states', []))
+        cities_ids = set(params.get('cities', []))
+        cities_ids.update(c.id for c in cities if c.state_id in states_ids)
+        places = [p for p in places if p.city_id in cities_ids]
+    if 'amenities' in params:
+        amenities = [storage.get('Amenity', id) for id in params['amenities']]
+        places = [p for p in places if all(a in p.amenities for a in amenities)]
+    for i, p in enumerate(places):
+        places[i] = p.to_dict()
+        try:
+            del places[i]['amenities']
+        except KeyError:
+            pass
+    return jsonify(places)
