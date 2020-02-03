@@ -81,31 +81,23 @@ def put_place(place_id):
 @app_views.route("/places_search", methods=['POST'])
 def places_search():
     """Search for a place by state, city, and amenity"""
-    params = request.get_json()
-    if params is None:
+    r = request.get_json()
+    if r is None:
         abort(make_response(jsonify("Not a JSON"), 400))
-    amenities = [
-        storage.get('Amenity', id) for id in params.get('amenities', [])
-    ]
-    states_id = set(params.get(
-        'states',
-        [] if params.get('cities') is not None else [
-            s.id for s in storage.all('State').values()]
-    ))
-    cities_id = set(params.get(
-        'cities',
-        [] if params.get('states') is not None else [
-            c.id for c in storage.all('City').values()
-        ]
-    ))
-    cities_id.update({
-        c.id for c in filter(
-            lambda c: c.state_id in states_id, storage.all('City').values()
+    if 'states' in r:
+        states_ids = set(r.get('states'))
+        cities_ids = set(r.get('cities', []))
+        cities_ids.update(c.id for c in filter(
+            lambda c: c.state_id in states_ids, storage.all('City').values()
+        ))
+    else:
+        cities_ids = set(
+            r.get('cities', [c.id for c in storage.all('City').values()])
         )
-    })
+    amenities = [storage.get('Amenity', id) for id in r.get('amenities', [])]
     places = filter(
-        lambda p: p.city_id in cities_id and all(map(
-            lambda a: a in p.amenities, amenities
+        lambda p: p.city_id in cities_ids and all(map(
+            lambda a: a in set(p.amenities), amenities
         )),
         storage.all('Place').values()
     )
