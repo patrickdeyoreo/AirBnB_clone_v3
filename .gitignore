@@ -37,3 +37,4 @@
 .DS_Store?
 ._*
 100-dump.sql
+.vs*
